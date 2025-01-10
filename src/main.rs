@@ -1,8 +1,6 @@
 use iced::widget::{button, column, row, text, progress_bar, scrollable, text_input, Space};
-use iced::{Alignment, Element, Command, Application, Settings, Color, Length, Size};
+use iced::{Alignment, Element, Task, Color, Length};
 use iced::theme::{Theme};
-use iced::executor;
-use iced::window;
 use iced_futures::futures;
 use futures::channel::mpsc;
 extern crate chrono;
@@ -32,22 +30,15 @@ use testpress::testpress;
 pub fn main() -> iced::Result {
      let mut widthxx: f32 = 1350.0;
      let mut heightxx: f32 = 750.0;
-     let (errcode, errstring, widtho, heighto) = get_winsize();
+     let (errcode, _errstring, widtho, heighto) = get_winsize();
      if errcode == 0 {
          widthxx = widtho as f32 - 20.0;
          heightxx = heighto as f32 - 75.0;
-         println!("{}", errstring);
-     } else {
-         println!("**ERROR {} get_winsize: {}", errcode, errstring);
      }
-
-     Hdcopy4bkup::run(Settings {
-        window: window::Settings {
-            size: Size::new(widthxx, heightxx),
-            ..window::Settings::default()
-        },
-        ..Settings::default()
-     })
+     iced::application(Hdcopy4bkup::title, Hdcopy4bkup::update, Hdcopy4bkup::view)
+        .window_size((widthxx, heightxx))
+        .theme(Hdcopy4bkup::theme)
+        .run_with(Hdcopy4bkup::new)
 }
 
 struct Hdcopy4bkup {
@@ -95,22 +86,17 @@ enum Message {
     ProgRtn(Result<Progstart, Error>),
 }
 
-impl Application for Hdcopy4bkup {
-    type Message = Message;
-    type Theme = Theme;
-    type Flags = ();
-    type Executor = executor::Default;
-    fn new(_flags: Self::Flags) -> (Hdcopy4bkup, iced::Command<Message>) {
+impl Hdcopy4bkup {
+    fn new() -> (Hdcopy4bkup, iced::Task<Message>) {
         let (tx_send, rx_receive) = mpsc::unbounded();
-//        let mut heightxx: f32 = 190.0;
-//        let (errcode, errstring, _widtho, heighto) = get_winsize();
-//        if errcode == 0 {
-//            heightxx = 190.0 + ((heighto as f32 - 768.0) / 2.0);
-//            println!("{}", errstring);
-//        } else {
-//         println!("**ERROR {} get_winsize: {}", errcode, errstring);
-//        }
-        ( Self { hd_value: "--".to_string(), inptpre_value: "--".to_string(), msg_value: "no message".to_string(),
+        let msgval: String;
+        let (errcode, errstring, _widtho, _heighto) = get_winsize();
+        if errcode == 0 {
+            msgval = format!("{}", errstring);
+        } else {
+            msgval = format!("**ERROR {} get_winsize: {}", errcode, errstring);
+        }
+        ( Self { hd_value: "--".to_string(), inptpre_value: "--".to_string(), msg_value: msgval.to_string(),
                rows_num: 0, mess_color: Color::from([0.0, 1.0, 0.0]), outdir_value: "--".to_string(),
                do_progress: false, progval: 0.0, tx_send, rx_receive, inptsubdir_value: "0".to_string(),
                outsubdir_value: "0".to_string(), from_value: "1".to_string(), newinptdir_value: "--".to_string(),
@@ -118,7 +104,7 @@ impl Application for Hdcopy4bkup {
                inptsubdir_num: 0, outsubdir_num: 0,     liststr_value:" List button not pressed \n \
                 ".to_string(), scrollheight: 170.0, scroll_value: "170.0".to_string(), test_press: false,
           },
-          Command::none()
+          Task::none()
         )
     }
 
@@ -127,7 +113,7 @@ impl Application for Hdcopy4bkup {
     }
 
 
-    fn update(&mut self, message: Message) -> Command<Message>  {
+    fn update(&mut self, message: Message) -> Task<Message>  {
         match message {
             Message::HdPressed => {
                self.test_press = false;
@@ -158,7 +144,7 @@ impl Application for Hdcopy4bkup {
                                          self.msg_value = format!("Hd list row is invalid length: {}", vecline.len());
                                          self.mess_color = Color::from([0.0, 1.0, 0.0]);
                                      } else {
-                                         let mut inptdirnm: String = vecline[3].to_string();
+                                         let mut inptdirnm: String = vecline[2].to_string();
                                           if inptdirnm[..1].to_string() == '"'.to_string() {
                                               inptdirnm = inptdirnm[1..(inptdirnm.len()-1)].to_string();
                                           }
@@ -201,7 +187,7 @@ impl Application for Hdcopy4bkup {
                } else {
                    self.mess_color = Color::from([1.0, 0.0, 0.0]);
                }
-               Command::none()
+               Task::none()
            }
             Message::OutPressed => {
                self.test_press = false;               
@@ -225,7 +211,7 @@ impl Application for Hdcopy4bkup {
                    self.mess_color = Color::from([1.0, 0.0, 0.0]);
                    self.msg_value = errstr.to_string();
                }
-               Command::none()
+               Task::none()
            }
             Message::InSubPressed => {
                self.test_press = false;
@@ -253,7 +239,7 @@ impl Application for Hdcopy4bkup {
                    self.mess_color = Color::from([1.0, 0.0, 0.0]);
                    self.msg_value = errstr.to_string();
                }
-               Command::none()
+               Task::none()
            }
             Message::TestPressed => {
                let (errcode, errstr) = testpress(self.liststr_value.clone());
@@ -265,7 +251,7 @@ impl Application for Hdcopy4bkup {
                    self.test_press = false;
                    self.mess_color = Color::from([1.0, 0.0, 0.0]);
                }
-               Command::none()
+               Task::none()
             }
             Message::CopyPressed => {
                if self.test_press {
@@ -274,16 +260,16 @@ impl Application for Hdcopy4bkup {
                    if errcode == 0 {
                        self.msg_value = "Copying just started".to_string();
                        self.mess_color = Color::from([0.0, 0.0, 1.0]);
-                       Command::perform(Execx::copyit(self.liststr_value.clone(), self.tx_send.clone()), Message::ExecxFound)
+                       Task::perform(Execx::copyit(self.liststr_value.clone(), self.tx_send.clone()), Message::ExecxFound)
                    } else {
                        self.msg_value = errstr.to_string();
                        self.mess_color = Color::from([1.0, 0.0, 0.0]);
-                       Command::none()
+                       Task::none()
                    }
                } else {
                    self.msg_value = "Test button was not pressed".to_string();
                    self.mess_color = Color::from([1.0, 0.0, 0.0]);
-                   Command::none()
+                   Task::none()
                }
             }
             Message::ExecxFound(Ok(exx)) => {
@@ -293,7 +279,7 @@ impl Application for Hdcopy4bkup {
                } else {
                    self.mess_color = Color::from([1.0, 0.0, 0.0]);
                }
-               Command::none()
+               Task::none()
             }
             Message::Subinpt(value) => {
                self.test_press = false;
@@ -335,7 +321,7 @@ impl Application for Hdcopy4bkup {
                        }
                    }
                }
-               Command::none()
+               Task::none()
             }
             Message::Subout(value) => {
                self.test_press = false;
@@ -371,17 +357,17 @@ impl Application for Hdcopy4bkup {
                        }
                    }
                }
-               Command::none()
+               Task::none()
             }
             Message::FromChanged(value) => {
                self.test_press = false;
                self.from_value = value;
-               Command::none()
+               Task::none()
             }
             Message::ToChanged(value) => {
                self.test_press = false;
                self.to_value = value;
-               Command::none()
+               Task::none()
             }
             Message::ScrollHChg(value) => {
                self.test_press = false;
@@ -398,7 +384,7 @@ impl Application for Hdcopy4bkup {
                    self.mess_color = Color::from([1.0, 0.0, 0.0]);
                }
                self.scroll_value = value;
-               Command::none()
+               Task::none()
             }
             Message::ListPressed => {
                self.test_press = false;
@@ -413,7 +399,7 @@ impl Application for Hdcopy4bkup {
                    self.mess_color = Color::from([1.0, 0.0, 0.0]);
                }
                self.msg_value = errstr.to_string();
-               Command::none()
+               Task::none()
             }
             Message::NextPressed => {
                self.test_press = false;
@@ -488,16 +474,16 @@ impl Application for Hdcopy4bkup {
                    }
                    self.msg_value = errstr.to_string();
                }
-               Command::none()
+               Task::none()
             }
             Message::ExecxFound(Err(_error)) => {
                self.msg_value = "error in copyx copyit routine".to_string();
                self.mess_color = Color::from([1.0, 0.0, 0.0]);
-               Command::none()
+               Task::none()
             }
             Message::ProgressPressed => {
                    self.do_progress = true;
-                   Command::perform(Progstart::pstart(), Message::ProgRtn)
+                   Task::perform(Progstart::pstart(), Message::ProgRtn)
             }
             Message::ProgRtn(Ok(_prx)) => {
               if self.do_progress {
@@ -539,18 +525,18 @@ impl Application for Hdcopy4bkup {
                     }
                 } 
                 if b100 {
-                    Command::none()   
+                    Task::none()   
                 } else {         
-                    Command::perform(Progstart::pstart(), Message::ProgRtn)
+                    Task::perform(Progstart::pstart(), Message::ProgRtn)
                 }
               } else {
-                Command::none()
+                Task::none()
               }
             }
             Message::ProgRtn(Err(_error)) => {
                 self.msg_value = "error in Progstart::pstart routine".to_string();
                 self.mess_color = Color::from([1.0, 0.0, 0.0]);
-               Command::none()
+               Task::none()
             }
 
         }
@@ -559,40 +545,40 @@ impl Application for Hdcopy4bkup {
     fn view(&self) -> Element<Message> {
         column![
             row![text("Message:").size(25),
-                 text(&self.msg_value).size(25).style(*&self.mess_color),
-            ].align_items(Alignment::Center).spacing(10).padding(5),
+                 text(&self.msg_value).size(25).color(*&self.mess_color),
+            ].align_y(Alignment::Center).spacing(10).padding(5),
             row![text(format!("# of rows: {}", self.rows_num)).size(15),
                  button("HD list input").on_press(Message::HdPressed),
                  text(&self.hd_value).size(15).width(1000)
-                ].align_items(Alignment::Center).spacing(10).padding(5),
+                ].align_y(Alignment::Center).spacing(10).padding(5),
             row![text(format!("first entry directory: {}", self.firstentrydir_value)).size(15)
-                ].align_items(Alignment::Center).spacing(10).padding(5),
+                ].align_y(Alignment::Center).spacing(10).padding(5),
             row![text(" sub-dir indent #: "),
                  text_input("0", &self.inptsubdir_value).on_input(Message::Subinpt).padding(5).size(15).width(60),
                  button("input prefix dir").on_press(Message::InSubPressed),
                  text(&self.inptpre_value).size(15).width(1000)
-                ].align_items(Alignment::Center).spacing(10).padding(5),
+                ].align_y(Alignment::Center).spacing(10).padding(5),
             row![text(format!("new input entry directory: {}", self.newinptdir_value)).size(15)
-                ].align_items(Alignment::Center).spacing(10).padding(5),
+                ].align_y(Alignment::Center).spacing(10).padding(5),
             row![text(" sub-dir indent #: "),
                  text_input("0", &self.outsubdir_value).on_input(Message::Subout).padding(5).size(15).width(60),
                  button("output dir").on_press(Message::OutPressed),
                  text(&self.outdir_value).size(15).width(1000)
-                ].align_items(Alignment::Center).spacing(10).padding(5),
+                ].align_y(Alignment::Center).spacing(10).padding(5),
             row![text(format!("new output entry directory: {}", self.newoutdir_value)).size(15)
-                ].align_items(Alignment::Center).spacing(10).padding(5),
+                ].align_y(Alignment::Center).spacing(10).padding(5),
             row![text("Scroll Height: "),
                  text_input("170.0", &self.scroll_value).on_input(Message::ScrollHChg).padding(5).size(15),
                  text("                 From: "),
                  text_input("1", &self.from_value).on_input(Message::FromChanged).padding(5).size(15),
                  text("                    To: "),
                  text_input("16", &self.to_value).on_input(Message::ToChanged).padding(5).size(15)
-                ].align_items(Alignment::Center).spacing(10).padding(5),
+                ].align_y(Alignment::Center).spacing(10).padding(5),
             row![Space::with_width(Length::Fixed(50.0)),
                  button("List Button").on_press(Message::ListPressed),
                  Space::with_width(Length::Fixed(50.0)),
                  button("Next Button").on_press(Message::NextPressed),
-            ].align_items(Alignment::Center).spacing(10).padding(5),
+            ].align_y(Alignment::Center).spacing(10).padding(5),
             scrollable(
                 column![
                         text(format!("{}",&self.liststr_value))
@@ -602,14 +588,14 @@ impl Application for Hdcopy4bkup {
                  button("Test Button").on_press(Message::TestPressed),
                  Space::with_width(Length::Fixed(50.0)),
                  button("Copy Button").on_press(Message::CopyPressed),
-            ].align_items(Alignment::Center).spacing(10).padding(5),
+            ].align_y(Alignment::Center).spacing(10).padding(5),
             row![button("Start Progress Button").on_press(Message::ProgressPressed),
                  progress_bar(0.0..=100.0,self.progval as f32),
                  text(format!("{}%", &self.progval)).size(15),
-            ].align_items(Alignment::Center).spacing(5).padding(5),
+            ].align_y(Alignment::Center).spacing(5).padding(5),
          ]
         .padding(5)
-        .align_items(Alignment::Start)
+        .align_x(Alignment::Start)
         .into()
     }
 

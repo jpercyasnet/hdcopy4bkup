@@ -109,13 +109,13 @@ pub fn makelist (hd_value: String, from_value: String, to_value: String, inptsub
 //                                          bolok = false;
                                           break;
                                       } else {
-                                          let mut inptfilenm: String = vecline[0].to_string();
+                                          let mut inptfilenm: String = vecline[1].to_string();
                                           if inptfilenm[..1].to_string() == '"'.to_string() {
                                               inptfilenm = inptfilenm[1..(inptfilenm.len()-1)].to_string();
                                           }
                                           let newlinelist = format!("{} -- {}", linenum, inptfilenm);
                                           new_mergelist = new_mergelist + &newlinelist + "\n ";
-                                          let mut inptdirnm: String = vecline[3].to_string();
+                                          let mut inptdirnm: String = vecline[2].to_string();
                                           if inptdirnm[..1].to_string() == '"'.to_string() {
                                               inptdirnm = inptdirnm[1..(inptdirnm.len()-1)].to_string();
                                           }
